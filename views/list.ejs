@@ -15,14 +15,8 @@
         <div class="task-item">
           <form action="/toggle" method="POST" class="task-form">
             <input type="hidden" name="id" value="<%= task._id %>">
-            <input
-              type="checkbox"
-              onchange="this.form.submit()"
-              <%= task.completed ? 'checked' : '' %>
-            />
-            <label class="<%= task.completed ? 'completed' : '' %>">
-              <%= task.name %>
-            </label>
+            <input type="checkbox" onchange="this.form.submit()" <%= task.completed ? 'checked' : '' %> />
+            <label class="<%= task.completed ? 'completed' : '' %>"><%= task.name %></label>
           </form>
           <form action="/delete" method="POST">
             <input type="hidden" name="id" value="<%= task._id %>">
