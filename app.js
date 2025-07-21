@@ -1,15 +1,21 @@
 const express = require("express");
 const mongoose = require("mongoose");
-const app = express();
 const dotenv = require("dotenv");
+const app = express();
 
 dotenv.config();
 
-const mongoURI = process.env.MONGO_URI;
+const PORT = process.env.PORT || 3000;
 
-mongoose.connect(mongoURI)
+const mongoURI = process.env.MONGO_URI;
+if (!mongoURI) {
+  console.error("MONGO_URI is not defined in environment variables.");
+  process.exit(1);
+}
+
+mongoose.connect(mongoURI, { useNewUrlParser: true, useUnifiedTopology: true })
   .then(() => console.log("MongoDB connected"))
-  .catch(err => console.log("MongoDB connection error:", err));
+  .catch(err => console.error("MongoDB connection error:", err));
 
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static("public"));
@@ -22,55 +28,57 @@ const taskSchema = new mongoose.Schema({
     default: false,
   },
 });
-
 const Task = mongoose.model("Task", taskSchema);
 
 (async () => {
-  const count = await Task.countDocuments({});
-  if (count === 0) {
-    await Task.insertMany([
-      { name: "Learn DSA" },
-      { name: "Learn Node.js" },
-      { name: "Learn Express.js" },
-      { name: "Learn MongoDB" },
-    ]);
+  try {
+    const count = await Task.countDocuments({});
+    if (count === 0) {
+      await Task.insertMany([
+        { name: "Learn DSA" },
+        { name: "Learn Node.js" },
+        { name: "Learn Express.js" },
+        { name: "Learn MongoDB" },
+      ]);
+    }
+  } catch (err) {
+    console.error("Error inserting default tasks:", err);
   }
 })();
 
 app.get("/", async (req, res) => {
   const tasks = await Task.find({});
-  res.render("list", { ejes: tasks });
+  res.render("list", { tasks });
 });
 
 app.post("/", async (req, res) => {
-  const taskName = req.body.e1e1;
-  if (taskName.trim() !== "") {
+  const taskName = req.body.taskName;
+  if (taskName && taskName.trim() !== "") {
     await Task.create({ name: taskName });
   }
   res.redirect("/");
 });
 
 app.post("/toggle", async (req, res) => {
-  const index = req.body.index;
-  const tasks = await Task.find({});
-  const task = tasks[index];
-  if (task) {
-    task.completed = !task.completed;
-    await task.save();
+  const taskId = req.body.id;
+  if (taskId) {
+    const task = await Task.findById(taskId);
+    if (task) {
+      task.completed = !task.completed;
+      await task.save();
+    }
   }
   res.redirect("/");
 });
 
 app.post("/delete", async (req, res) => {
-  const index = req.body.index;
-  const tasks = await Task.find({});
-  const task = tasks[index];
-  if (task) {
-    await Task.findByIdAndDelete(task._id);
+  const taskId = req.body.id;
+  if (taskId) {
+    await Task.findByIdAndDelete(taskId);
   }
   res.redirect("/");
 });
 
-app.listen(3000, () => {
-  console.log("Server started on http://localhost:3000");
+app.listen(PORT, () => {
+  console.log(`Server started on http://localhost:${PORT}`);
 });

@@ -1,33 +1,41 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-    <title>To Do List</title>
-    <link rel="stylesheet" href="/styles.css" />
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>To Do List</title>
+  <link rel="stylesheet" href="/styles.css" />
 </head>
 <body>
-    <div class="Box">
-        <h1>To Do List</h1>
-        <% ejes.forEach(function(task, index) { %>
-            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
-                <form action="/toggle" method="POST" style="display: flex; align-items: center;">
-                    <input type="hidden" name="index" value="<%= index %>">
-                    <input type="checkbox" onchange="this.form.submit()" <%= task.completed ? 'checked' : '' %>>
-                    <p style="<%= task.completed ? 'text-decoration: line-through; color: gray;' : '' %>">
-                        <%= task.name %>
-                    </p>
-                </form>
-                <form action="/delete" method="POST">
-                    <input type="hidden" name="index" value="<%= index %>">
-                    <button type="submit" style="background: red; color: white; border: none; cursor: pointer;">X</button>
-                </form>
-            </div>
-        <% }); %>
-        <form action="/" method="post" style="margin-top: 20px;">
-            <input type="text" name="e1e1" placeholder="Add a new task" />
-            <button type="submit">+</button>
-        </form>
+  <div class="box">
+    <h1>To Do List</h1>
+
+    <div class="task-list">
+      <% tasks.forEach(function(task) { %>
+        <div class="task-item">
+          <form action="/toggle" method="POST" class="task-form">
+            <input type="hidden" name="id" value="<%= task._id %>">
+            <input
+              type="checkbox"
+              onchange="this.form.submit()"
+              <%= task.completed ? 'checked' : '' %>
+            />
+            <label class="<%= task.completed ? 'completed' : '' %>">
+              <%= task.name %>
+            </label>
+          </form>
+          <form action="/delete" method="POST">
+            <input type="hidden" name="id" value="<%= task._id %>">
+            <button class="delete-btn" type="submit">X</button>
+          </form>
+        </div>
+      <% }); %>
     </div>
+
+    <form action="/" method="POST" class="add-task-form">
+      <input type="text" name="taskName" placeholder="Add a new task" required />
+      <button type="submit">+</button>
+    </form>
+  </div>
 </body>
 </html>
