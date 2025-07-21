@@ -12,10 +12,10 @@ if (!mongoURI) {
   console.error("MONGO_URI is not defined in environment variables.");
   process.exit(1);
 }
-
-mongoose.connect(mongoURI, { useNewUrlParser: true, useUnifiedTopology: true })
+mongoose.connect(process.env.MONGO_URI)
   .then(() => console.log("MongoDB connected"))
   .catch(err => console.error("MongoDB connection error:", err));
+
 
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static("public"));
