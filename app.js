@@ -6,8 +6,8 @@ const app = express();
 dotenv.config();
 
 const PORT = process.env.PORT || 3000;
-
 const mongoURI = process.env.MONGO_URI;
+
 if (!mongoURI) {
   console.error("MONGO_URI is not defined in environment variables.");
   process.exit(1);
@@ -25,9 +25,10 @@ const taskSchema = new mongoose.Schema({
   name: String,
   completed: {
     type: Boolean,
-    default: false,
-  },
+    default: false
+  }
 });
+
 const Task = mongoose.model("Task", taskSchema);
 
 (async () => {
@@ -38,7 +39,7 @@ const Task = mongoose.model("Task", taskSchema);
         { name: "Learn DSA" },
         { name: "Learn Node.js" },
         { name: "Learn Express.js" },
-        { name: "Learn MongoDB" },
+        { name: "Learn MongoDB" }
       ]);
     }
   } catch (err) {
