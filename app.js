@@ -12,10 +12,10 @@ if (!mongoURI) {
   console.error("MONGO_URI is not defined in environment variables.");
   process.exit(1);
 }
-mongoose.connect(process.env.MONGO_URI)
+
+mongoose.connect(mongoURI)
   .then(() => console.log("MongoDB connected"))
   .catch(err => console.error("MongoDB connection error:", err));
-
 
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static("public"));
@@ -80,5 +80,5 @@ app.post("/delete", async (req, res) => {
 });
 
 app.listen(PORT, () => {
-  console.log(`Server started on http://localhost:${PORT}`);
+  console.log(`Server started on port ${PORT}`);
 });
