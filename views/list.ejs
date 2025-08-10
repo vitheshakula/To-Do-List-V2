@@ -5,29 +5,59 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>To Do List</title>
   <link rel="stylesheet" href="/styles.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
   <div class="box">
     <h1>To Do List</h1>
 
-    <div class="task-list">
-      <% tasks.forEach(function(task) { %>
-        <div class="task-item">
-          <form action="/toggle" method="POST" class="task-form">
-            <input type="hidden" name="id" value="<%= task._id %>">
-            <input type="checkbox" onchange="this.form.submit()" <%= task.completed ? 'checked' : '' %> />
-            <label class="<%= task.completed ? 'completed' : '' %>"><%= task.name %></label>
-          </form>
-          <form action="/delete" method="POST">
-            <input type="hidden" name="id" value="<%= task._id %>">
-            <button class="delete-btn" type="submit">X</button>
-          </form>
+    <% if (message && message !== "") { %>
+      <div class="alert"><%= message %></div>
+    <% } %>
+
+    <% const groupedTasks = { urgent: [], high: [], low: [] }; %>
+    <% tasks.forEach(task => groupedTasks[task.priority]?.push(task)); %>
+
+    <% Object.keys(groupedTasks).forEach(priority => { %>
+      <% if (groupedTasks[priority].length > 0) { %>
+        <h2 class="priority-heading <%= priority %>"><%= priority.charAt(0).toUpperCase() + priority.slice(1) %></h2>
+        <div class="task-list">
+          <% groupedTasks[priority].forEach(function(task) { %>
+            <div class="task-item">
+
+              <form action="/toggle/<%= task._id %>?_method=PATCH" method="POST" class="task-form">
+                <input type="checkbox" onchange="this.form.submit()" <%= task.completed ? 'checked' : '' %> />
+                <label class="<%= task.completed ? 'completed' : '' %>">
+                  <%= task.name %>
+                </label>
+              </form>
+
+              <form action="/edit/<%= task._id %>?_method=PUT" method="POST" class="inline-form">
+                <input type="text" name="taskName" value="<%= task.name %>" required />
+                <select name="priority">
+                  <option value="urgent" <%= task.priority === 'urgent' ? 'selected' : '' %>>Urgent</option>
+                  <option value="high" <%= task.priority === 'high' ? 'selected' : '' %>>High</option>
+                  <option value="low" <%= task.priority === 'low' ? 'selected' : '' %>>Low</option>
+                </select>
+                <button type="submit" title="Edit"><i class="fa fa-pencil"></i></button>
+              </form>
+
+              <form action="/delete/<%= task._id %>?_method=DELETE" method="POST" class="inline-form">
+                <button class="delete-btn" type="submit" title="Delete"><i class="fa fa-trash"></i></button>
+              </form>
+            </div>
+          <% }); %>
         </div>
-      <% }); %>
-    </div>
+      <% } %>
+    <% }); %>
 
     <form action="/" method="POST" class="add-task-form">
       <input type="text" name="taskName" placeholder="Add a new task" required />
+      <select name="priority">
+        <option value="urgent">Urgent</option>
+        <option value="high">High</option>
+        <option value="low" selected>Low</option>
+      </select>
       <button type="submit">+</button>
     </form>
   </div>
