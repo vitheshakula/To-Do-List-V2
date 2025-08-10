@@ -1,6 +1,7 @@
 const express = require("express");
 const mongoose = require("mongoose");
 const dotenv = require("dotenv");
+const methodOverride = require("method-override");
 const app = express();
 
 dotenv.config();
@@ -20,13 +21,12 @@ mongoose.connect(mongoURI)
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static("public"));
 app.set("view engine", "ejs");
+app.use(methodOverride("_method"));
 
 const taskSchema = new mongoose.Schema({
-  name: String,
-  completed: {
-    type: Boolean,
-    default: false
-  }
+  name: { type: String, required: true },
+  completed: { type: Boolean, default: false },
+  priority: { type: String, enum: ["urgent", "high", "low"], default: "low" }
 });
 
 const Task = mongoose.model("Task", taskSchema);
@@ -36,10 +36,10 @@ const Task = mongoose.model("Task", taskSchema);
     const count = await Task.countDocuments({});
     if (count === 0) {
       await Task.insertMany([
-        { name: "Learn DSA" },
-        { name: "Learn Node.js" },
-        { name: "Learn Express.js" },
-        { name: "Learn MongoDB" }
+        { name: "Learn DSA", priority: "high" },
+        { name: "Learn Node.js", priority: "urgent" },
+        { name: "Learn Express.js", priority: "high" },
+        { name: "Learn MongoDB", priority: "low" }
       ]);
     }
   } catch (err) {
@@ -49,35 +49,42 @@ const Task = mongoose.model("Task", taskSchema);
 
 app.get("/", async (req, res) => {
   const tasks = await Task.find({});
-  res.render("list", { tasks });
+  const message = req.query.message || "";
+  res.render("list", { tasks, message });
 });
 
 app.post("/", async (req, res) => {
-  const taskName = req.body.taskName;
-  if (taskName && taskName.trim() !== "") {
-    await Task.create({ name: taskName });
+  const { taskName, priority } = req.body;
+  if (!taskName || taskName.trim() === "") {
+    return res.redirect("/?message=" + encodeURIComponent("Task title cannot be empty!"));
   }
-  res.redirect("/");
+  await Task.create({ name: taskName, priority: priority || "low" });
+  res.redirect("/?message=" + encodeURIComponent("Task added successfully!"));
 });
 
-app.post("/toggle", async (req, res) => {
-  const taskId = req.body.id;
-  if (taskId) {
-    const task = await Task.findById(taskId);
-    if (task) {
-      task.completed = !task.completed;
-      await task.save();
-    }
+app.put("/edit/:id", async (req, res) => {
+  const { id } = req.params;
+  const { taskName, priority } = req.body;
+  if (!taskName || taskName.trim() === "") {
+    return res.redirect("/?message=" + encodeURIComponent("Task title cannot be empty!"));
   }
-  res.redirect("/");
+  await Task.findByIdAndUpdate(id, { name: taskName, priority: priority || "low" });
+  res.redirect("/?message=" + encodeURIComponent("Task updated successfully!"));
 });
 
-app.post("/delete", async (req, res) => {
-  const taskId = req.body.id;
-  if (taskId) {
-    await Task.findByIdAndDelete(taskId);
+app.patch("/toggle/:id", async (req, res) => {
+  const { id } = req.params;
+  const task = await Task.findById(id);
+  if (task) {
+    task.completed = !task.completed;
+    await task.save();
   }
-  res.redirect("/");
+  res.redirect("/?message=" + encodeURIComponent("Task status updated!"));
+});
+
+app.delete("/delete/:id", async (req, res) => {
+  await Task.findByIdAndDelete(req.params.id);
+  res.redirect("/?message=" + encodeURIComponent("Task deleted successfully!"));
 });
 
 app.listen(PORT, () => {
