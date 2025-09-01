@@ -1,59 +1,86 @@
-const express = require("express");
-const mongoose = require("mongoose");
-const path = require("path");
 require("dotenv").config();
+const express = require("express");
+const bodyParser = require("body-parser");
+const mongoose = require("mongoose");
+const methodOverride = require("method-override");
 
 const app = express();
 
 // Middleware
-app.use(express.urlencoded({ extended: true }));
-app.use(express.static(path.join(__dirname, "public")));
 app.set("view engine", "ejs");
-app.set("views", path.join(__dirname, "views"));
+app.use(bodyParser.urlencoded({ extended: true }));
+app.use(express.static("public"));
+app.use(methodOverride("_method"));
 
-// MongoDB connection
+// Connect to MongoDB
 mongoose
-  .connect(process.env.MONGO_URI)
+  .connect(process.env.MONGO_URI, {
+    useNewUrlParser: true,
+    useUnifiedTopology: true,
+  })
   .then(() => console.log("✅ Connected to MongoDB"))
-  .catch((err) => console.log("❌ MongoDB connection error:", err));
+  .catch((err) => console.error("❌ MongoDB connection error:", err));
 
-// Task model
+// Schema
 const taskSchema = new mongoose.Schema({
-  title: { type: String, required: true },
+  name: String,
   completed: { type: Boolean, default: false },
+  priority: { type: String, enum: ["urgent", "high", "low"], default: "low" },
 });
 
 const Task = mongoose.model("Task", taskSchema);
 
 // Routes
 app.get("/", async (req, res) => {
-  const tasks = await Task.find();
-  res.render("list", { tasks });
-});
-
-app.post("/add", async (req, res) => {
-  const { title } = req.body;
-  if (title.trim() !== "") {
-    await Task.create({ title });
+  try {
+    const tasks = await Task.find();
+    res.render("list", { tasks, message: "" }); // ✅ message always defined
+  } catch (err) {
+    res.status(500).send("Error fetching tasks");
   }
-  res.redirect("/");
 });
 
-app.post("/delete/:id", async (req, res) => {
-  await Task.findByIdAndDelete(req.params.id);
-  res.redirect("/");
+app.post("/", async (req, res) => {
+  const { taskName, priority } = req.body;
+  try {
+    await Task.create({ name: taskName, priority });
+    res.redirect("/");
+  } catch (err) {
+    res.render("list", { tasks: [], message: "❌ Failed to add task" });
+  }
 });
 
-app.post("/toggle/:id", async (req, res) => {
-  const task = await Task.findById(req.params.id);
-  if (task) {
+app.patch("/toggle/:id", async (req, res) => {
+  try {
+    const task = await Task.findById(req.params.id);
     task.completed = !task.completed;
     await task.save();
+    res.redirect("/");
+  } catch (err) {
+    res.render("list", { tasks: [], message: "❌ Failed to toggle task" });
   }
-  res.redirect("/");
 });
 
-// Start server
+app.put("/edit/:id", async (req, res) => {
+  const { taskName, priority } = req.body;
+  try {
+    await Task.findByIdAndUpdate(req.params.id, { name: taskName, priority });
+    res.redirect("/");
+  } catch (err) {
+    res.render("list", { tasks: [], message: "❌ Failed to edit task" });
+  }
+});
+
+app.delete("/delete/:id", async (req, res) => {
+  try {
+    await Task.findByIdAndDelete(req.params.id);
+    res.redirect("/");
+  } catch (err) {
+    res.render("list", { tasks: [], message: "❌ Failed to delete task" });
+  }
+});
+
+// Server
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`🚀 Server running on http://localhost:${PORT}`);
