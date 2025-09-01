@@ -1,92 +1,60 @@
 const express = require("express");
 const mongoose = require("mongoose");
-const dotenv = require("dotenv");
-const methodOverride = require("method-override");
+const path = require("path");
+require("dotenv").config();
+
 const app = express();
 
-dotenv.config();
-
-const PORT = process.env.PORT || 3000;
-const mongoURI = process.env.MONGO_URI;
-
-if (!mongoURI) {
-  console.error("MONGO_URI is not defined in environment variables.");
-  process.exit(1);
-}
-
-mongoose.connect(mongoURI)
-  .then(() => console.log("MongoDB connected"))
-  .catch(err => console.error("MongoDB connection error:", err));
-
+// Middleware
 app.use(express.urlencoded({ extended: true }));
-app.use(express.static("public"));
+app.use(express.static(path.join(__dirname, "public")));
 app.set("view engine", "ejs");
-app.use(methodOverride("_method"));
+app.set("views", path.join(__dirname, "views"));
 
+// MongoDB connection
+mongoose
+  .connect(process.env.MONGO_URI)
+  .then(() => console.log("✅ Connected to MongoDB"))
+  .catch((err) => console.log("❌ MongoDB connection error:", err));
+
+// Task model
 const taskSchema = new mongoose.Schema({
-  name: { type: String, required: true },
+  title: { type: String, required: true },
   completed: { type: Boolean, default: false },
-  priority: { type: String, enum: ["urgent", "high", "low"], default: "low" }
 });
 
 const Task = mongoose.model("Task", taskSchema);
 
-(async () => {
-  try {
-    const count = await Task.countDocuments({});
-    if (count === 0) {
-      await Task.insertMany([
-        { name: "Learn DSA", priority: "high" },
-        { name: "Learn Node.js", priority: "urgent" },
-        { name: "Learn Express.js", priority: "high" },
-        { name: "Learn MongoDB", priority: "low" }
-      ]);
-    }
-  } catch (err) {
-    console.error("Error inserting default tasks:", err);
-  }
-})();
-
+// Routes
 app.get("/", async (req, res) => {
-  const tasks = await Task.find({});
-  const message = req.query.message || "";
-  res.render("list", { tasks, message });
+  const tasks = await Task.find();
+  res.render("list", { tasks });
 });
 
-app.post("/", async (req, res) => {
-  const { taskName, priority } = req.body;
-  if (!taskName || taskName.trim() === "") {
-    return res.redirect("/?message=" + encodeURIComponent("Task title cannot be empty!"));
+app.post("/add", async (req, res) => {
+  const { title } = req.body;
+  if (title.trim() !== "") {
+    await Task.create({ title });
   }
-  await Task.create({ name: taskName, priority: priority || "low" });
-  res.redirect("/?message=" + encodeURIComponent("Task added successfully!"));
+  res.redirect("/");
 });
 
-app.put("/edit/:id", async (req, res) => {
-  const { id } = req.params;
-  const { taskName, priority } = req.body;
-  if (!taskName || taskName.trim() === "") {
-    return res.redirect("/?message=" + encodeURIComponent("Task title cannot be empty!"));
-  }
-  await Task.findByIdAndUpdate(id, { name: taskName, priority: priority || "low" });
-  res.redirect("/?message=" + encodeURIComponent("Task updated successfully!"));
+app.post("/delete/:id", async (req, res) => {
+  await Task.findByIdAndDelete(req.params.id);
+  res.redirect("/");
 });
 
-app.patch("/toggle/:id", async (req, res) => {
-  const { id } = req.params;
-  const task = await Task.findById(id);
+app.post("/toggle/:id", async (req, res) => {
+  const task = await Task.findById(req.params.id);
   if (task) {
     task.completed = !task.completed;
     await task.save();
   }
-  res.redirect("/?message=" + encodeURIComponent("Task status updated!"));
+  res.redirect("/");
 });
 
-app.delete("/delete/:id", async (req, res) => {
-  await Task.findByIdAndDelete(req.params.id);
-  res.redirect("/?message=" + encodeURIComponent("Task deleted successfully!"));
-});
-
+// Start server
+const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log(`Server started on port ${PORT}`);
+  console.log(`🚀 Server running on http://localhost:${PORT}`);
 });
